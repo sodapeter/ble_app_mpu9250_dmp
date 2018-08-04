@@ -117,6 +117,7 @@ static inline int reg_int_cb(struct int_param_s *int_param)
 #define fabs(x)     (((x)>0)?(x):-(x))
 #elif defined NRF52
 #include "inv_pesky.h"
+#include "twi_master.h"
 #else
 #error  Gyro driver is missing the system layer implementations.
 #endif
@@ -713,7 +714,7 @@ int mpu_read_reg(unsigned char reg, unsigned char *data)
  *  @param[in]  int_param   Platform-specific parameters to interrupt API.
  *  @return     0 if successful.
  */
-int mpu_init(struct int_param_s *int_param)
+int mpu_init(void)  //(struct int_param_s *int_param)
 {
     unsigned char data[6];
 
@@ -773,10 +774,10 @@ int mpu_init(struct int_param_s *int_param)
     if (mpu_configure_fifo(0))
         return -1;
 
-#ifndef EMPL_TARGET_STM32F4    
-    if (int_param)
-        reg_int_cb(int_param);
-#endif
+//#ifndef EMPL_TARGET_STM32F4    
+//    if (int_param)
+//        reg_int_cb(int_param);
+//#endif
 
 #ifdef AK89xx_SECONDARY
     setup_compass();
@@ -2940,7 +2941,7 @@ static int setup_compass(void)
     mpu_set_bypass(1);
 
     /* Find compass. Possible addresses range from 0x0C to 0x0F. */
-    for (akm_addr = 0x0C; akm_addr <= 0x0F; akm_addr++) {
+    for (akm_addr = (0x0C << 1); akm_addr <= 0x0F; akm_addr++) {
         int result;
         result = i2c_read(akm_addr, AKM_REG_WHOAMI, 1, data);
         if (!result && (data[0] == AKM_WHOAMI))
@@ -3286,6 +3287,54 @@ lp_int_restore:
 
     st.chip_cfg.int_motion_only = 0;
     return 0;
+}
+
+//static int reg_int_cb(struct int_param_s *int_param)
+//{
+//    nrf_drv_gpiote_in_config_t config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(true); // true - high accurracy
+//    //config.pull = NRF_GPIO_PIN_PULLUP;
+
+//    APP_ERROR_CHECK(nrf_drv_gpiote_in_init(int_param->pin, &config, int_param->cb));
+//    nrf_drv_gpiote_in_event_enable(int_param->pin, true);
+//    
+//    return 0;
+//}
+
+int i2c_write(unsigned char slave_addr, unsigned char reg_addr, unsigned char length, unsigned char const *data) {
+		
+	/* I2C rapper */
+	bool _result = false;
+	uint8_t tx_data[(length+1)];
+
+	tx_data[0] = reg_addr;
+	memcpy(&tx_data[1], data, length);
+	_result = twi_master_transfer(AXIS_SENSOR, tx_data,(length + 1), true);
+	
+	if(!_result)
+	{
+		return -1;
+	}
+	return 0;
+}
+
+int i2c_read(unsigned char slave_addr, unsigned char reg_addr, unsigned char length, unsigned char *data) {
+
+	/* I2C rapper */
+	bool _result = false;
+
+	_result = twi_master_transfer(AXIS_SENSOR, &reg_addr, 1, false);
+	if(_result)
+	{
+		_result = twi_master_transfer((AXIS_SENSOR | TWI_READ_BIT), data, length, true);
+	} else{
+		return -1;
+	}
+	
+	if(!_result)
+	{
+		return -1;
+	}
+	return 0;
 }
 
 /**

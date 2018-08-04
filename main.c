@@ -67,7 +67,6 @@
 #include "bsp_btn_ble.h"
 
 #include "ble_mpu_dmp.h"
-
 #include "mpu_dmp.h"
 
 
@@ -75,7 +74,7 @@
 
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2        /**< Reply when unsupported features are requested. */
 
-#define DEVICE_NAME                     "Nordic_UART"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "nRF52_Quaternion"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -84,7 +83,7 @@
 #define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout (in units of seconds). */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(25, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
 #define SLAVE_LATENCY                   0                                           /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)             /**< Connection supervisory timeout (4 seconds), Supervision Timeout uses 10 ms units. */
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
@@ -283,6 +282,7 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
         case BLE_ADV_EVT_IDLE:
             err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+            APP_ERROR_CHECK(err_code);
             //sleep_mode_enter();
             break;
         default:
@@ -553,9 +553,9 @@ static void power_manage(void)
 
 static void updateValue(void)
 {
-	float value[4];
-  run_dmp(value);
-	ble_mpu_update(&m_dmp, (uint8_t *)value, sizeof(value));
+    float value[4] = {0.0f};
+    run_dmp(value);
+    ble_mpu_update(&m_dmp, (uint8_t *)value, sizeof(value));
 }
 
 /**@brief Application main function.
@@ -566,7 +566,6 @@ int main(void)
     bool     erase_bonds;
 
     // Initialize.
-
   	err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
 
@@ -591,10 +590,10 @@ int main(void)
     {
         //UNUSED_RETURN_VALUE(NRF_LOG_PROCESS());
         power_manage();
-			
-			if(m_conn_handle != BLE_CONN_HANDLE_INVALID && m_dmp.is_notification_enabled == true) {
-				updateValue();
-      }
+
+        if(m_conn_handle != BLE_CONN_HANDLE_INVALID && m_dmp.is_notification_enabled == true) {
+          updateValue();
+        }
     }
 }
 

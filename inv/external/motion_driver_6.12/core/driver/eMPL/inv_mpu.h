@@ -30,6 +30,7 @@
 
 #if defined NRF52
 #include "nrf_drv_gpiote.h"
+#define AXIS_SENSOR 0xD0 //0x68
 #endif
 
 struct int_param_s {
@@ -66,7 +67,7 @@ struct int_param_s {
 #define MPU_INT_STATUS_DMP_5            (0x2000)
 
 /* Set up APIs */
-int mpu_init(struct int_param_s *int_param);
+int mpu_init(void); //(struct int_param_s *int_param);
 int mpu_init_slave(void);
 int mpu_set_bypass(unsigned char bypass_on);
 
@@ -136,6 +137,10 @@ int mpu_read_reg(unsigned char reg, unsigned char *data);
 int mpu_run_self_test(long *gyro, long *accel);
 int mpu_run_6500_self_test(long *gyro, long *accel, unsigned char debug);
 int mpu_register_tap_cb(void (*func)(unsigned char, unsigned char));
+
+//Dummy
+int i2c_write(unsigned char slave_addr, unsigned char reg_addr, unsigned char length, unsigned char const *data);
+int i2c_read(unsigned char slave_addr, unsigned char reg_addr, unsigned char length, unsigned char *data);
 
 #endif  /* #ifndef _INV_MPU_H_ */
 
