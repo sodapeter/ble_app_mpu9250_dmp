@@ -949,10 +949,11 @@ int mpu_get_temperature(long *data, unsigned long *timestamp)
     if (i2c_read(st.hw->addr, st.reg->temp, 2, tmp))
         return -1;
     raw = (tmp[0] << 8) | tmp[1];
-    if (timestamp)
-        get_ms(timestamp);
+    //if (timestamp)
+    //    get_ms(timestamp);
 
-    data[0] = (long)((35 + ((raw - (float)st.hw->temp_offset) / st.hw->temp_sens)) * 65536L);
+    //data[0] = (long)((35 + ((raw - (float)st.hw->temp_offset) / st.hw->temp_sens)) * 65536L);
+		*data = raw;
     return 0;
 }
 

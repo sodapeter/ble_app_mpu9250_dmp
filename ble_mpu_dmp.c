@@ -45,12 +45,29 @@
 
 #define BLE_UUID_MPU_TX_CHARACTERISTIC 0x0002                      /**< The UUID of the TX Characteristic. */
 
-#define BLE_MPU_MAX_TX_CHAR_LEN          sizeof(float)*4 //sizeof(float)*10
+#ifndef USE_DMP
+#define BLE_UUID_MPU_RX_CHARACTERISTIC 0x0003                      /**< The UUID of the RX Characteristic. */
+#endif
 
-#define MPU_BASE_UUID                   {{0x82, 0xA1, 0xEA, 0xE9, 0xD5, 0x5A, 0x2A, 0x97, 0x97, 0x4C, 0x38, 0x8D, 0x00, 0x00, 0x57, 0xB5}} /**< Used vendor specific UUID. */
+#ifdef USE_DMP
+#define BLE_MPU_MAX_TX_CHAR_LEN          sizeof(float)*4
+#else
+#define BLE_MPU_MAX_TX_CHAR_LEN          sizeof(float)*10
+#endif
 
-#define QUATERNION_CHAR_DESC "Quaternion"
+#define BLE_MPU_MAX_RX_CHAR_LEN          sizeof(uint8_t);
 
+#ifdef USE_DMP
+#define MPU_BASE_UUID                   {{ 0x82, 0xA1, 0xEA, 0xE9, 0xD5, 0x5A, 0x2A, 0x97, 0x97, 0x4C, 0x38, 0x8D, 0x00, 0x00, 0x57, 0xB5 }} /**< Used vendor specific UUID. */
+#else
+#define MPU_BASE_UUID                   {{ 0xEF, 0xB1, 0x0F, 0xDB, 0x73, 0x0A, 0x44, 0xA9, 0xB9, 0x47, 0x23, 0x1A, 0x00, 0x00, 0x3D, 0x28 }} /**< Used vendor specific UUID. */
+#endif
+
+#define TX_CHAR_DESC "Tx"
+
+#ifndef USE_DMP
+#define RX_CHAR_DESC "Rx"
+#endif
 
 /**@brief Function for handling the @ref BLE_GAP_EVT_CONNECTED event from the SoftDevice.
  *
@@ -87,7 +104,7 @@ static void on_write(ble_mpu_t * p_mpu, ble_evt_t const * p_ble_evt)
     ble_mpu_evt_t evt;
     evt.p_mpu = p_mpu;
 	
-    if  (p_evt_write->handle == p_mpu->tx_handles.cccd_handle) {
+    if (p_evt_write->handle == p_mpu->tx_handles.cccd_handle) {
         if (ble_srv_is_notification_enabled(p_evt_write->data)) {
             p_mpu->is_notification_enabled = true;
             evt.type = BLE_MPU_EVT_COMM_STARTED;
@@ -96,7 +113,15 @@ static void on_write(ble_mpu_t * p_mpu, ble_evt_t const * p_ble_evt)
             evt.type = BLE_MPU_EVT_COMM_STOPPED;
         }
 				p_mpu->data_handler(&evt);
-    }else {
+		}
+
+    #ifndef USE_DMP
+		else if(p_evt_write->handle == p_mpu->rx_handles.cccd_handle) {
+			p_mpu->data_handler(&evt);
+    }
+		#endif
+
+		else {
         // Do Nothing. This event is not relevant for this service.
         //
     }
@@ -129,9 +154,9 @@ static uint32_t tx_char_add(ble_mpu_t * p_mpu, ble_mpu_init_t const * p_mpu_init
     memset(&char_md, 0, sizeof(char_md));
 
     char_md.char_props.notify = 1;
-    char_md.p_char_user_desc  = (uint8_t *)QUATERNION_CHAR_DESC;
-    char_md.char_user_desc_max_size  = sizeof(QUATERNION_CHAR_DESC);
-    char_md.char_user_desc_size      = sizeof(QUATERNION_CHAR_DESC);
+    char_md.p_char_user_desc  = (uint8_t *)TX_CHAR_DESC;
+    char_md.char_user_desc_max_size  = sizeof(TX_CHAR_DESC);
+    char_md.char_user_desc_size      = sizeof(TX_CHAR_DESC);
     char_md.p_char_pf         = NULL;
     char_md.p_user_desc_md    = NULL;
     char_md.p_cccd_md         = &cccd_md;
@@ -173,7 +198,7 @@ static uint32_t tx_char_add(ble_mpu_t * p_mpu, ble_mpu_init_t const * p_mpu_init
  *
  * @return NRF_SUCCESS on success, otherwise an error code.
  */
-/*
+#ifndef USE_DMP
 static uint32_t rx_char_add(ble_mpu_t * p_mpu, const ble_mpu_init_t * p_mpu_init)
 {
     ble_gatts_char_md_t char_md;
@@ -183,10 +208,14 @@ static uint32_t rx_char_add(ble_mpu_t * p_mpu, const ble_mpu_init_t * p_mpu_init
 
     memset(&char_md, 0, sizeof(char_md));
 
+		char_md.char_props.notify = 0;
     char_md.char_props.write         = 1;
     char_md.char_props.write_wo_resp = 1;
-    char_md.p_char_user_desc         = NULL;
-    char_md.p_char_pf                = NULL;
+    //char_md.p_char_user_desc         = NULL;
+    char_md.p_char_user_desc  = (uint8_t *)RX_CHAR_DESC;
+    char_md.char_user_desc_max_size  = sizeof(RX_CHAR_DESC);
+    char_md.char_user_desc_size      = sizeof(RX_CHAR_DESC);
+		char_md.p_char_pf                = NULL;
     char_md.p_user_desc_md           = NULL;
     char_md.p_cccd_md                = NULL;
     char_md.p_sccd_md                = NULL;
@@ -208,7 +237,7 @@ static uint32_t rx_char_add(ble_mpu_t * p_mpu, const ble_mpu_init_t * p_mpu_init
 
     attr_char_value.p_uuid    = &ble_uuid;
     attr_char_value.p_attr_md = &attr_md;
-    attr_char_value.init_len  = 1;
+    attr_char_value.init_len  = BLE_MPU_MAX_RX_CHAR_LEN;
     attr_char_value.init_offs = 0;
     attr_char_value.max_len   = BLE_MPU_MAX_RX_CHAR_LEN;
 
@@ -217,7 +246,7 @@ static uint32_t rx_char_add(ble_mpu_t * p_mpu, const ble_mpu_init_t * p_mpu_init
                                            &attr_char_value,
                                            &p_mpu->rx_handles);
 }
-*/
+#endif
 
 void ble_mpu_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context)
 {
@@ -292,6 +321,12 @@ uint32_t ble_mpu_init(ble_mpu_t * p_mpu, ble_mpu_init_t const * p_mpu_init)
     err_code = tx_char_add(p_mpu, p_mpu_init);
     VERIFY_SUCCESS(err_code);
 
+    // Add the RX Characteristic.
+		#ifndef USE_DMP
+    err_code = rx_char_add(p_mpu, p_mpu_init);
+    VERIFY_SUCCESS(err_code);
+		#endif
+		
     return NRF_SUCCESS;
 }
 

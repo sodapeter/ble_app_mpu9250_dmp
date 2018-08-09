@@ -62,6 +62,7 @@
 #include "nrf_sdh_soc.h"
 #include "nrf_sdh_ble.h"
 #include "nrf_ble_gatt.h"
+#include "nrf_drv_clock.h"
 #include "app_timer.h"
 #include "app_util_platform.h"
 #include "bsp_btn_ble.h"
@@ -74,7 +75,7 @@
 
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2        /**< Reply when unsupported features are requested. */
 
-#define DEVICE_NAME                     "nRF52_Quaternion"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "nRF52"                               /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -82,16 +83,24 @@
 #define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout (in units of seconds). */
 
-#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
-#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(25, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
+#ifdef USE_DMP
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(25, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(50, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
+#else
+#define MIN_CONN_INTERVAL               MSEC_TO_UNITS(25, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
+#define MAX_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
+#endif
+
 #define SLAVE_LATENCY                   0                                           /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)             /**< Connection supervisory timeout (4 seconds), Supervision Timeout uses 10 ms units. */
+
 #define FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                       /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
 #define NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(30000)                      /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
 #define MAX_CONN_PARAMS_UPDATE_COUNT    3                                           /**< Number of attempts before giving up the connection parameter negotiation. */
 
-#define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
+#define L2CAP_HDR_LEN                   4                                           /**< L2CAP header length. */
 
+#define DEAD_BEEF                       0xDEADBEEF                                  /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
 BLE_MPU_DEF(m_dmp);                                                                 /**< BLE MPU service instance. */
 NRF_BLE_GATT_DEF(m_gatt);                                                           /**< GATT module instance. */
@@ -164,11 +173,45 @@ static void gap_params_init(void)
 /**@snippet [Handling the data received over BLE] */
 static void mpu_data_handler(ble_mpu_evt_t * p_evt)
 {
-
-//    if (p_evt->type == BLE_NUS_EVT_RX_DATA)
-//    {
-//    }
-
+  #ifndef USE_DMP
+  if (p_evt->type == BLE_MPU_EVT_RX_DATA) {
+		
+      uint8_t fsr_data = (uint8_t)p_evt->params.rx_data.p_data[0];		
+			
+			switch (fsr_data){
+				case 1:
+				  {
+						mpu_set_accel_fsr(2);
+					  mpu_set_gyro_fsr(250);
+					}
+					break;
+					
+			  case 2:
+          {
+				 mpu_set_accel_fsr(4);
+					  mpu_set_gyro_fsr(500);
+				  }
+					break;
+				
+				case 3:
+				  {
+					  mpu_set_accel_fsr(8);
+					  mpu_set_gyro_fsr(1000);
+					}
+					break;
+				
+				case 4:
+				  {
+					  mpu_set_accel_fsr(16);
+					  mpu_set_gyro_fsr(2000);
+					}
+					break;
+					
+				default:
+					break;
+			}
+  }
+	#endif
 }
 /**@snippet [Handling the data received over BLE] */
 
@@ -303,10 +346,25 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_CONNECTED:
+				    {
             //NRF_LOG_INFO("Connected");
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+            
+						#ifdef USE_PHY
+						ble_gap_phys_t gap_phys_settings;
+						gap_phys_settings.tx_phys = BLE_GAP_PHY_1MBPS;
+            gap_phys_settings.rx_phys = BLE_GAP_PHY_1MBPS;
+
+
+						#ifdef S140
+              sd_ble_gap_phy_request(m_conn_handle, &gap_phys_settings);
+            #else
+              sd_ble_gap_phy_update(m_conn_handle, &gap_phys_settings);
+            #endif
+						#endif
+						}
             break;
 
         case BLE_GAP_EVT_DISCONNECTED:
@@ -551,11 +609,49 @@ static void power_manage(void)
     APP_ERROR_CHECK(err_code);
 }
 
+#ifndef USE_DMP
+static void gatt_mtu_set(uint16_t att_mtu)
+{
+    ret_code_t err_code;
+        
+    err_code = nrf_ble_gatt_att_mtu_periph_set(&m_gatt, att_mtu);
+    APP_ERROR_CHECK(err_code);
+    
+    err_code = nrf_ble_gatt_att_mtu_central_set(&m_gatt, att_mtu);
+    APP_ERROR_CHECK(err_code);
+}
+
+static void data_len_ext_set(bool status)
+{
+    uint8_t data_length = status ? (247 + L2CAP_HDR_LEN) : (23 + L2CAP_HDR_LEN);
+    (void) nrf_ble_gatt_data_length_set(&m_gatt, BLE_CONN_HANDLE_INVALID, data_length);
+}
+#endif
+
 static void updateValue(void)
 {
+
+	#ifdef USE_DMP
     float value[4] = {0.0f};
     run_dmp(value);
     ble_mpu_update(&m_dmp, (uint8_t *)value, sizeof(value));
+	#else
+	  float value[10] = {0.0f};
+		run_9dof(value);
+		ble_mpu_update(&m_dmp, (uint8_t *)value, sizeof(value));
+	#endif
+}
+
+/**
+ * @brief Function for starting lfclk needed by APP_TIMER.
+ */
+static void lfclk_init(void)
+{
+    uint32_t err_code;
+    err_code = nrf_drv_clock_init();
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_clock_lfclk_request(NULL);
 }
 
 /**@brief Application main function.
@@ -566,9 +662,9 @@ int main(void)
     bool     erase_bonds;
 
     // Initialize.
-  	err_code = app_timer_init();
+    lfclk_init();
+		err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
-
 
     mpu9250_init();
 
@@ -580,6 +676,11 @@ int main(void)
     advertising_init();
     conn_params_init();
 
+	  #ifndef USE_DMP
+	    gatt_mtu_set(247);
+      data_len_ext_set(true);
+	  #endif
+		
     //printf("\r\nUART Start!\r\n");
     //NRF_LOG_INFO("UART Start!");
     err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
