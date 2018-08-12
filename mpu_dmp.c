@@ -1,12 +1,5 @@
 #include "mpu_dmp.h"
 
-#include "twi_master.h"
-
-#include "app_util_platform.h"
-#include "nrf_drv_twi.h"
-#include "nrf_drv_gpiote.h"
-#include "nrf.h"
-
 #define QUAT_W 0
 #define QUAT_X 1
 #define QUAT_Y 2
@@ -62,19 +55,11 @@ enum{
   GYRO_2000DPS = 2000,
 };
 
-/**
- * @brief Function that configures GPIOTE to give an interrupt on pin change.
- */
-static void gpio_config(void)
-{
-    APP_ERROR_CHECK(nrf_drv_gpiote_init());
-}
+
 
 static void mpu_config(void)
 {
   uint32_t      err_code;
-	
-	twi_master_init();
 	
 	err_code = mpu_init();
 	APP_ERROR_CHECK(err_code);
@@ -123,17 +108,6 @@ static void mpu_config(void)
 	#endif
 
 }
-
-
-//void set_dmp_state(bool state)
-//{
-//  if ( state == true ) {
-//    mpu_set_dmp_state(1);
-//  } else {
-//    mpu_set_dmp_state(0);
-//  }
-//}
-
 
 static void getAccel( float data[3], short temp[3] ) {
 
@@ -262,7 +236,7 @@ void run_dmp(float* value)
 
 void mpu9250_init(void)
 {
-  gpio_config();
+
   mpu_config();
 }
 

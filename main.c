@@ -47,9 +47,7 @@
  * This file contains the source code for a sample application that uses the Nordic UART service.
  * This application uses the @ref srvlib_conn_params module.
  */
-
-
-
+ 
 #include <stdint.h>
 #include <string.h>
 #include "nordic_common.h"
@@ -63,11 +61,18 @@
 #include "nrf_sdh_ble.h"
 #include "nrf_ble_gatt.h"
 #include "nrf_drv_clock.h"
+//#include "nrf_drv_twi.h"
+#include "nrf_drv_gpiote.h"
+#include "nrf.h"
 #include "app_timer.h"
 #include "app_util_platform.h"
+
+#include "nrf_nvic.h"
+
 #include "bsp_btn_ble.h"
 
 #include "ble_mpu_dmp.h"
+#include "twi_master.h"
 #include "mpu_dmp.h"
 
 
@@ -75,7 +80,7 @@
 
 #define APP_FEATURE_NOT_SUPPORTED       BLE_GATT_STATUS_ATTERR_APP_BEGIN + 2        /**< Reply when unsupported features are requested. */
 
-#define DEVICE_NAME                     "nRF52"                               /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "BLUESHELL"                                 /**< Name of device. Will be included in the advertising data. */
 #define NUS_SERVICE_UUID_TYPE           BLE_UUID_TYPE_VENDOR_BEGIN                  /**< UUID type for the Nordic UART Service (vendor specific). */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -188,8 +193,8 @@ static void mpu_data_handler(ble_mpu_evt_t * p_evt)
 					
 			  case 2:
           {
-				 mpu_set_accel_fsr(4);
-					  mpu_set_gyro_fsr(500);
+            mpu_set_accel_fsr(4);
+            mpu_set_gyro_fsr(500);
 				  }
 					break;
 				
@@ -524,6 +529,7 @@ void gatt_init(void)
 void bsp_event_handler(bsp_event_t event)
 {
     uint32_t err_code;
+
     switch (event)
     {
         case BSP_EVENT_SLEEP:
@@ -548,6 +554,10 @@ void bsp_event_handler(bsp_event_t event)
                 }
             }
             break;
+						
+//			  case BSP_EVENT_KEY_0:
+//				    sd_nvic_SystemReset();
+//				    break;
 
         default:
             break;
@@ -643,6 +653,14 @@ static void updateValue(void)
 }
 
 /**
+ * @brief Function that configures GPIOTE to give an interrupt on pin change.
+ */
+static void gpio_config(void)
+{
+    APP_ERROR_CHECK(nrf_drv_gpiote_init());
+}
+
+/**
  * @brief Function for starting lfclk needed by APP_TIMER.
  */
 static void lfclk_init(void)
@@ -665,7 +683,9 @@ int main(void)
     lfclk_init();
 		err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
-
+		
+    gpio_config();
+    twi_master_init();
     mpu9250_init();
 
     buttons_leds_init(&erase_bonds);
