@@ -163,6 +163,7 @@ struct ble_mpu_s
     uint16_t                 conn_handle;             /**< Handle of the current connection (as provided by the SoftDevice). BLE_CONN_HANDLE_INVALID if not in a connection. */
     bool                     is_notification_enabled; /**< Variable to indicate if the peer has enabled notification of the RX characteristic.*/
     ble_mpu_data_handler_t   data_handler;            /**< Event handler to be called for handling received data. */
+	  uint16_t                 max_payload_len;         //!< Maximum number of bytes which can be sent in one notification. */
 };
 
 
@@ -176,7 +177,7 @@ struct ble_mpu_s
  * @retval NRF_SUCCESS If the service was successfully initialized. Otherwise, an error code is returned.
  * @retval NRF_ERROR_NULL If either of the pointers p_nus or p_mpu_init is NULL.
  */
-uint32_t ble_mpu_init(ble_mpu_t * p_nus, ble_mpu_init_t const * p_mpu_init);
+uint32_t ble_mpu_init(ble_mpu_t * p_mpu, ble_mpu_init_t const * p_mpu_init);
 
 
 /**@brief   Function for handling the Nordic UART Service's BLE events.
@@ -203,7 +204,7 @@ void ble_mpu_on_ble_evt(ble_evt_t const * p_ble_evt, void * p_context);
  *
  * @retval NRF_SUCCESS If the string was sent successfully. Otherwise, an error code is returned.
  */
-uint32_t ble_mpu_update(ble_mpu_t* p_nus, uint8_t* accel_values, uint16_t length);
+uint32_t ble_mpu_update(ble_mpu_t* p_mpu, uint8_t* values, uint16_t length);
 
 
 #ifdef __cplusplus

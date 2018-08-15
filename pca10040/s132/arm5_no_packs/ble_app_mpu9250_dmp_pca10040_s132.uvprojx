@@ -1155,6 +1155,16 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\..\components\drivers_nrf\twi_master\deprecated\twi_sw_master.c</FilePath>
             </File>
+            <File>
+              <FileName>nrf_drv_ppi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\components\drivers_nrf\ppi\nrf_drv_ppi.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_drv_timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\components\drivers_nrf\timer\nrf_drv_timer.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -3678,6 +3688,16 @@
               <FileName>twi_sw_master.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\..\..\..\components\drivers_nrf\twi_master\deprecated\twi_sw_master.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_drv_ppi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\components\drivers_nrf\ppi\nrf_drv_ppi.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_drv_timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\..\..\components\drivers_nrf\timer\nrf_drv_timer.c</FilePath>
             </File>
           </Files>
         </Group>

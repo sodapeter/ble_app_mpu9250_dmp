@@ -331,7 +331,7 @@ uint32_t ble_mpu_init(ble_mpu_t * p_mpu, ble_mpu_init_t const * p_mpu_init)
 }
 
 
-uint32_t ble_mpu_update(ble_mpu_t* p_mpu, uint8_t* quaternion_values, uint16_t length)
+uint32_t ble_mpu_update(ble_mpu_t* p_mpu, uint8_t* values, uint16_t length)
 {
     ble_gatts_hvx_params_t hvx_params;
 
@@ -346,11 +346,16 @@ uint32_t ble_mpu_update(ble_mpu_t* p_mpu, uint8_t* quaternion_values, uint16_t l
     {
         return NRF_ERROR_INVALID_PARAM;
     }
-
+    
+		if (length > p_mpu->max_payload_len)
+		{
+		    return NRF_ERROR_INVALID_LENGTH;
+		}
+		
     memset(&hvx_params, 0, sizeof(hvx_params));
 
     hvx_params.handle = p_mpu->tx_handles.value_handle;
-    hvx_params.p_data = quaternion_values;
+    hvx_params.p_data = values;
     hvx_params.p_len  = &length;
     hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
 
